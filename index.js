@@ -91,25 +91,36 @@ bot.on("callback_query", async (query) => {
 bot.on("message", async (msg) => {
   const isFromAdminGroup = msg.chat.id.toString() === process.env.ADMIN_GROUP_ID;
 
+  // ✅ Make sure it's a reply to a photo message with (ID: <userId>)
   if (
     isFromAdminGroup &&
     msg.reply_to_message &&
-    msg.photo &&
     msg.reply_to_message.caption?.includes("ID:")
   ) {
     const caption = msg.reply_to_message.caption;
     const userId = caption.match(/ID: (\d+)/)?.[1];
 
     if (userId) {
-      const photo = msg.photo[msg.photo.length - 1].file_id;
+      // ✅ If it's a photo
+      if (msg.photo) {
+        const photo = msg.photo[msg.photo.length - 1].file_id;
+        await bot.sendPhoto(userId, photo, {
+          caption: `🎉 Here’s your animated photo! Hayao Miyazaki himself drew it for you 😊`,
+        });
+      }
 
-      await bot.sendPhoto(userId, photo, {
-        caption: `🎉 Here’s your animated photo!`,
-      });
+      // ✅ If it's a text message
+      if (msg.text) {
+        await bot.sendMessage(
+          userId,
+          `✉️ Message from admin:\n\n${msg.text}`
+        );
+      }
 
+      // ✅ Thank-you message
       await bot.sendMessage(
         userId,
-        `If you want more photos animated in Ghibli style, please run this bot:\n👉 @animeghibli_bot\n\n Thanks for using our service!💌`
+        `If you want more photos animated in Ghibli style, please run this bot:\n👉 @animeghibli_bot\n\nThanks for using our service! 💌`
       );
     }
   }
