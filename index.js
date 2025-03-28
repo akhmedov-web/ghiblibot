@@ -91,7 +91,6 @@ bot.on("callback_query", async (query) => {
 bot.on("message", async (msg) => {
   const isFromAdminGroup = msg.chat.id.toString() === process.env.ADMIN_GROUP_ID;
 
-  // ✅ Make sure it's a reply to a photo message with (ID: <userId>)
   if (
     isFromAdminGroup &&
     msg.reply_to_message &&
@@ -101,30 +100,50 @@ bot.on("message", async (msg) => {
     const userId = caption.match(/ID: (\d+)/)?.[1];
 
     if (userId) {
-      // ✅ If it's a photo
-      if (msg.photo) {
-        const photo = msg.photo[msg.photo.length - 1].file_id;
-        await bot.sendPhoto(userId, photo, {
-          caption: `🎉 Here’s your animated photo! Hayao Miyazaki himself drew it for you 😊`,
-        });
-      }
+      try {
+        // ✅ Send photo (if any)
+        if (msg.photo) {
+          const photo = msg.photo[msg.photo.length - 1].file_id;
+          await bot.sendPhoto(userId, photo, {
+            caption: `🎉 Here’s your animated photo! Hayao Miyazaki himself drew it for you 😊`,
+          });
+        }
 
-      // ✅ If it's a text message
-      if (msg.text) {
+        // ✅ Send text (if any)
+        if (msg.text) {
+          await bot.sendMessage(
+            userId,
+            `✉️ Message from admin:\n\n${msg.text}`
+          );
+        }
+
+        // ✅ Send thank-you message
         await bot.sendMessage(
           userId,
-          `✉️ Message from admin:\n\n${msg.text}`
+          `If you want more photos animated in Ghibli style, please run this bot:\n👉 @animeghibli_bot\n\nThanks for using our service! 💌`
         );
-      }
+      } catch (error) {
+        console.error("❌ Error sending to user:", error.response?.body || error);
 
-      // ✅ Thank-you message
-      await bot.sendMessage(
-        userId,
-        `If you want more photos animated in Ghibli style, please run this bot:\n👉 @animeghibli_bot\n\nThanks for using our service! 💌`
-      );
+        if (
+          error.response?.body?.error_code === 403 ||
+          error.response?.body?.description?.includes("bot was blocked")
+        ) {
+          await bot.sendMessage(
+            msg.chat.id,
+            `❌ The user (ID: ${userId}) has blocked the bot.`
+          );
+        } else {
+          await bot.sendMessage(
+            msg.chat.id,
+            `⚠️ Failed to deliver the message to user ID: ${userId}.`
+          );
+        }
+      }
     }
   }
 });
+
 
 app.get("/", (req, res) => {
   res.send("Bot is running!");
